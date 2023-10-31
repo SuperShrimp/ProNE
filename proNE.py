@@ -21,9 +21,14 @@ class ProNE():
 		self.emb2 = emb_file2
 		self.dimension = dimension
 
+		#读取边缘（矩阵）
 		self.G = nx.read_edgelist(self.graph, nodetype=int, create_using=nx.DiGraph())
+		# print(self.G.edges())
+		#有向图转换为无向图？
 		self.G = self.G.to_undirected()
+		#节点个数
 		self.node_number = self.G.number_of_nodes()
+		#List of Lists format，两个嵌套列表储存数据。一个储存列信息，另一个储存数据
 		matrix0 = scipy.sparse.lil_matrix((self.node_number, self.node_number))
 
 		for e in self.G.edges():
@@ -32,6 +37,7 @@ class ProNE():
 				matrix0[e[1], e[0]] = 1
 		self.matrix0 = scipy.sparse.csr_matrix(matrix0)
 		print(matrix0.shape)
+
 
 	def get_embedding_rand(self, matrix):
 		# Sparse randomized tSVD for fast embedding
@@ -57,14 +63,16 @@ class ProNE():
 		U = preprocessing.normalize(U, "l2")
 		print('densesvd time', time.time() - t1)
 		return U
-
+	#解决长尾分布问题，将嵌入转化为矩阵
 	def pre_factorization(self, tran, mask):
 		# Network Embedding as Sparse Matrix Factorization
 		t1 = time.time()
 		l1 = 0.75
+		#对矩阵进行L1归一化
 		C1 = preprocessing.normalize(tran, "l1")
+		print(C1.shape)
 		neg = np.array(C1.sum(axis=0))[0] ** l1
-
+		#临界矩阵/对角度矩阵 neg=p_i,j
 		neg = neg / neg.sum()
 
 		neg = scipy.sparse.diags(neg, format="csr")
@@ -77,11 +85,14 @@ class ProNE():
 		C1.data = np.log(C1.data)
 		neg.data = np.log(neg.data)
 
+		#C1=r_ic_j
 		C1 -= neg
 		F = C1
+		#embedding matrix 
 		features_matrix = self.get_embedding_rand(F)
 		return features_matrix
 
+	#Chebyshev Expansion for Efficiency
 	def chebyshev_gaussian(self, A, a, order=10, mu=0.5, s=0.5):
 		# NE Enhancement via Spectral Propagation
 		print('Chebyshev Series -----------------')
@@ -154,6 +165,7 @@ def main():
 	args = parse_args()
 
 	t_0 = time.time()
+	#构建矩阵，把图放进去
 	model = ProNE(args.graph, args.emb1, args.emb2, args.dimension)
 	t_1 = time.time()
 
