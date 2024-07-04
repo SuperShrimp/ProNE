@@ -30,6 +30,9 @@ class ProNE():
 			if e[0] != e[1]:
 				matrix0[e[0], e[1]] = 1
 				matrix0[e[1], e[0]] = 1
+
+		#这个地方可以重新改一下
+		#建立稀疏矩阵
 		self.matrix0 = scipy.sparse.csr_matrix(matrix0)
 		print(matrix0.shape)
 
@@ -37,8 +40,10 @@ class ProNE():
 		# Sparse randomized tSVD for fast embedding
 		t1 = time.time()
 		l = matrix.shape[0]
+		#构建稀疏矩阵
 		smat = scipy.sparse.csc_matrix(matrix)  # convert to sparse CSC format
 		print('svd sparse', smat.data.shape[0] * 1.0 / l ** 2)
+		#随机SVD分解
 		U, Sigma, VT = randomized_svd(smat, n_components=self.dimension, n_iter=5, random_state=None)
 		U = U * np.sqrt(Sigma)
 		U = preprocessing.normalize(U, "l2")
@@ -48,10 +53,13 @@ class ProNE():
 	def get_embedding_dense(self, matrix, dimension):
 		# get dense embedding via SVD
 		t1 = time.time()
+		#U里面每个值都是matrix*matrix^T的特征向量
 		U, s, Vh = linalg.svd(matrix, full_matrices=False, check_finite=False, overwrite_a=True)
 		U = np.array(U)
+		#压缩到dimension的维度
 		U = U[:, :dimension]
 		s = s[:dimension]
+		#奇异值
 		s = np.sqrt(s)
 		U = U * s
 		U = preprocessing.normalize(U, "l2")
@@ -83,6 +91,7 @@ class ProNE():
 		return features_matrix
 
 	def chebyshev_gaussian(self, A, a, order=10, mu=0.5, s=0.5):
+		#谱传播
 		# NE Enhancement via Spectral Propagation
 		print('Chebyshev Series -----------------')
 		t1 = time.time()
